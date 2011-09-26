@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+ <rss version="2.0">
+ 
+<!--
+This is a data file that is meant to be read by RSS readers or aggregators.
+See http://www.ec.gc.ca/meteo-weather/default.asp?lang=En&n=11703207-1 to learn more about our RSS service.
+-->
+
+ <channel>
+ <title>Montréal - Weather - Environment Canada</title>
+ <link>http://www.weatheroffice.gc.ca</link>
+ <description>Current weather conditions, forecasts and warnings for: Montréal</description>
+ <language>en-ca</language>
+ <copyright>Copyright 2011, Environment Canada</copyright>
+ <item>
+ <title>No watches or warnings in effect, Montréal</title>
+ <link>http://www.weatheroffice.gc.ca/warnings/warnings_e.html</link>
+ <description>No watches or warnings in effect.</description>
+ <category>Warnings and Watches</category>
+ <guid isPermaLink="false">qc-147_w1 14 Sep 2011 02:45:00 GMT</guid>
+ <pubDate>14 Sep 2011 02:45:00 GMT</pubDate>
+ </item>
+ <item>
+ <title>Current Conditions: Mostly Cloudy, 21.1&#xB0;C</title>
+ <link>http://www.weatheroffice.gc.ca/city/pages/qc-147_metric_e.html</link>
+ <description><![CDATA[<b>Observed at:</b> Montréal-Trudeau Int'l Airport 12:00 PM EDT Sunday 25 September 2011 <br/>
+<b>Condition:</b> Mostly Cloudy <br/>
+<b>Temperature:</b> 21.1&deg;C <br/>
+<b>Pressure / Tendency:</b> 102.0 kPa rising<br/>
+<b>Visibility:</b> 48.3 km<br/>
+<b>Humidity:</b> 74 %<br/>
+<b>Humidex:</b> 26 <br/>
+<b>Dewpoint:</b> 16.3&deg;C <br/>
+<b>Wind:</b> SW 13 km/h<br/>
+<b>Air Quality Health Index:</b>  <br/>
+]]></description>
+ <category>Current Conditions</category>
+ <guid isPermaLink="false">qc-147_cc 25 Sep 2011 16:00:00 GMT</guid>
+ <pubDate>25 Sep 2011 16:00:00 GMT</pubDate>
+ </item>
+ <item>
+ <title>Sunday: Clearing. High 26.</title>
+ <link>http://www.weatheroffice.gc.ca/city/pages/qc-147_metric_e.html</link>
+ <description>Clearing. High 26. UV index 6 or high. Forecast issued 11:30 AM EDT Sunday 25 September 2011</description>
+ <category>Weather Forecasts</category>
+ <guid isPermaLink="false">qc-147_fc1 25 Sep 2011 15:30:00 GMT</guid>
+ <pubDate>25 Sep 2011 15:30:00 GMT</pubDate>
+ </item>
+ <item>
+ <title>Sunday night: A few clouds. Low 14.</title>
+ <link>http://www.weatheroffice.gc.ca/city/pages/qc-147_metric_e.html</link>
+ <description>A few clouds. Low 14. Forecast issued 11:30 AM EDT Sunday 25 September 2011</description>
+ <category>Weather Forecasts</category>
+ <guid isPermaLink="false">qc-147_fc2 25 Sep 2011 15:30:00 GMT</guid>
+ <pubDate>25 Sep 2011 15:30:00 GMT</pubDate>
+ </item>
+ <item>
+ <title>Monday: Sunny. High 24.</title>
+ <link>http://www.weatheroffice.gc.ca/city/pages/qc-147_metric_e.html</link>
+ <description>Sunny. High 24. Forecast issued 11:30 AM EDT Sunday 25 September 2011</description>
+ <category>Weather Forecasts</category>
+ <guid isPermaLink="false">qc-147_fc3 25 Sep 2011 15:30:00 GMT</guid>
+ <pubDate>25 Sep 2011 15:30:00 GMT</pubDate>
+ </item>
+ <item>
+ <title>Tuesday: A mix of sun and cloud. Low 13. High 25.</title>
+ <link>http://www.weatheroffice.gc.ca/city/pages/qc-147_metric_e.html</link>
+ <description>A mix of sun and cloud. Low 13. High 25. Forecast issued 11:30 AM EDT Sunday 25 September 2011</description>
+ <category>Weather Forecasts</category>
+ <guid isPermaLink="false">qc-147_fc4 25 Sep 2011 15:30:00 GMT</guid>
+ <pubDate>25 Sep 2011 15:30:00 GMT</pubDate>
+ </item>
+ <item>
+ <title>Wednesday: Chance of showers. Low 18. High 20. POP 60%</title>
+ <link>http://www.weatheroffice.gc.ca/city/pages/qc-147_metric_e.html</link>
+ <description>Cloudy with 60 percent chance of showers. Low 18. High 20. Forecast issued 11:30 AM EDT Sunday 25 September 2011</description>
+ <category>Weather Forecasts</category>
+ <guid isPermaLink="false">qc-147_fc5 25 Sep 2011 15:30:00 GMT</guid>
+ <pubDate>25 Sep 2011 15:30:00 GMT</pubDate>
+ </item>
+ <item>
+ <title>Thursday: Showers. Low 17. High 21.</title>
+ <link>http://www.weatheroffice.gc.ca/city/pages/qc-147_metric_e.html</link>
+ <description>Showers. Low 17. High 21. Forecast issued 11:30 AM EDT Sunday 25 September 2011</description>
+ <category>Weather Forecasts</category>
+ <guid isPermaLink="false">qc-147_fc6 25 Sep 2011 15:30:00 GMT</guid>
+ <pubDate>25 Sep 2011 15:30:00 GMT</pubDate>
+ </item>
+ <item>
+ <title>Friday: Chance of showers. Low 13. High 19. POP 60%</title>
+ <link>http://www.weatheroffice.gc.ca/city/pages/qc-147_metric_e.html</link>
+ <description>Cloudy with 60 percent chance of showers. Low 13. High 19. Forecast issued 11:30 AM EDT Sunday 25 September 2011</description>
+ <category>Weather Forecasts</category>
+ <guid isPermaLink="false">qc-147_fc7 25 Sep 2011 15:30:00 GMT</guid>
+ <pubDate>25 Sep 2011 15:30:00 GMT</pubDate>
+ </item>
+ <item>
+ <title>Saturday: Periods of rain. Low 13. High 16.</title>
+ <link>http://www.weatheroffice.gc.ca/city/pages/qc-147_metric_e.html</link>
+ <description>Periods of rain. Low 13. High 16. Forecast issued 11:30 AM EDT Sunday 25 September 2011</description>
+ <category>Weather Forecasts</category>
+ <guid isPermaLink="false">qc-147_fc8 25 Sep 2011 15:30:00 GMT</guid>
+ <pubDate>25 Sep 2011 15:30:00 GMT</pubDate>
+ </item>
+ </channel>
+ </rss>
+
