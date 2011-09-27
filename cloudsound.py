@@ -24,14 +24,7 @@ from pyo import *
 
 SND_PATH = 'snds/'
 URL_TIMEOUT = 0
-# scrape Montreal current weather from the weather office site
 
-try:
-    url = urllib2.urlopen("http://text.www.weatheroffice.gc.ca/rss/city/qc-147_e.xml", timeout=URL_TIMEOUT).read()
-except URLError:
-    url = open('qc-147_e.xml').read()
-
-#url = open('/stuff/weather/qc-147_e.xml').read()
 def weather_to_int(nn):
     nn_num = 1
     if re.search(r'sun',nn,re.I): nn_num -= 1
@@ -42,6 +35,8 @@ def weather_to_int(nn):
     if re.search(r'thunder',nn,re.I): nn_num += 100
     return nn_num
 
+# scrape Montreal current weather from the weather office site
+
 regex = re.compile("<b>Condition:<\/b> ([\w\s]+?)<br\/>\n"
          "<b>Temperature:<\/b> ([\d\.]+).*?<br\/>\n"
          "<b>Pressure \/ Tendency:<\/b> ([\d\.]*) kPa (\w*)<br\/>\n"
@@ -50,21 +45,8 @@ regex = re.compile("<b>Condition:<\/b> ([\w\s]+?)<br\/>\n"
 #        "<b>Humidex:<\/b> ([\d\.]*).*?<br\/>\n"
          "<b>Dewpoint:<\/b> ([\d\.]*).*?<br\/>\n"
          "<b>Wind:<\/b> (\w*).*?([\d\.]+) km\/h<br\/>", re.DOTALL)
-weather = regex.search(url)
-for n in range(1,10):
-    print weather.group(n)
-
-cond = weather_to_int(weather.group(1))
-temp = float(weather.group(2))
-humidity = int(weather.group(6))
-wind = float(weather.group(9))
 
 # scrape Montreal forecasted weather from montreal-weather.ca
-
-try:
-    url2 = urllib2.urlopen("http://montreal-weather.ca/", timeout=URL_TIMEOUT).read()
-except URLError:
-    url2 = open('montreal-weather.html').read()
 
 regex2 = re.compile(
 "POP.*?(\d+|-).*?"
@@ -81,31 +63,53 @@ regex2 = re.compile(
 "<li class=\"prev petit\">[\s\n]*(\w[\w\s]*\w)\s*<\/li>.*?"
 "([\d\.-]+).*?([\d\.-]+).*?(\d+|-).*?", re.DOTALL)
 
-forecast = regex2.search(url2)
-forecast_conditions = []
-forecast_highs = []
-forecast_lows = []
-forecast_pop = []
+def WeatherScrape():
 
-rain = forecast.group(1)
-if rain == "-": rain = 0
-else: rain = int(rain)
+    current = {}
+    forecast = {"conditions":[],"highs":[],"lows":[],"pop":[]}
 
-for n in range(2,26,4):
-    nn = forecast.group(n)
-    forecast_conditions.append(weather_to_int(nn))
-print forecast_conditions
-for n in range(3,26,4):
-    forecast_highs.append(int(forecast.group(n))*14)
-print forecast_highs
-for n in range(4,26,4):
-    forecast_lows.append(int(forecast.group(n))*7)
-print forecast_lows
-for n in range(5,26,4):
-    nn = forecast.group(n)
-    if nn == "-": forecast_pop.append(0)
-    else: forecast_pop.append(int(forecast.group(n))/12.0)
-print forecast_pop
+    try:
+        url = urllib2.urlopen("http://text.www.weatheroffice.gc.ca/rss/city/qc-147_e.xml", timeout=URL_TIMEOUT).read()
+    except URLError:
+        url = open('qc-147_e.xml').read()
+
+    #url = open('/stuff/weather/qc-147_e.xml').read()
+
+    cur = regex.search(url)
+    for n in range(1,10):
+        print cur.group(n)
+
+    current["conditions"] = weather_to_int(cur.group(1))
+    current["temp"] = float(cur.group(2))
+    current["humidity"] = int(cur.group(6))
+    current["wind"] = float(cur.group(9))
+
+
+    try:
+        url2 = urllib2.urlopen("http://montreal-weather.ca/", timeout=URL_TIMEOUT).read()
+    except URLError:
+        url2 = open('montreal-weather.html').read()
+
+    fore = regex2.search(url2)
+    current["rain"] = fore.group(1)
+    if current["rain"] == "-": current["rain"] = 0
+    else: current["rain"] = int(current["rain"])
+
+    for n in range(2,26,4):
+        forecast["conditions"].append(weather_to_int(fore.group(n)))
+    print forecast["conditions"]
+    for n in range(3,26,4):
+        forecast["highs"].append(int(fore.group(n))*14)
+    print forecast["highs"]
+    for n in range(4,26,4):
+        forecast["lows"].append(int(fore.group(n))*7)
+    print forecast["lows"]
+    for n in range(5,26,4):
+        nn = fore.group(n)
+        if nn == "-": forecast["pop"].append(0)
+        else: forecast["pop"].append(int(fore.group(n))/12.0)
+    print forecast["pop"]
+    return current,forecast
 
 # --------------- Sound Stuff -----------------------------------
 
@@ -182,7 +186,7 @@ def update_cricket(temp, ambient_sounds):
         temperature_ratio,mul=1),outs=2,pan=0.8).out())
 
 
-def update_melody(humidity, forecast_highs, forecast_lows, sounds):
+def update_melody(humidity, forecast_highs, forecast_lows, forecast_pop, sounds):
     # humidity - controls speed of forecast melody
     humid = .5 + humidity/100.0*.5
 
@@ -220,13 +224,16 @@ def update_mixdown(sounds, ambient_sounds):
 
 sounds = []
 ambient_sounds = []
+
 while True:
+    current, forecast = WeatherScrape()
     reset_sounds(sounds, ambient_sounds)
-    update_rain(rain, temp, cond, ambient_sounds)
-    update_snow(rain, temp, cond, ambient_sounds)
-    update_thunder(cond, ambient_sounds)
-    update_wind(wind, ambient_sounds)
-    update_cricket(temp, ambient_sounds)
-    update_melody(humidity, forecast_highs, forecast_lows, sounds)
+    update_rain(current["rain"], current["temp"], current["conditions"], ambient_sounds)
+    update_snow(current["rain"], current["temp"], current["conditions"], ambient_sounds)
+    update_thunder(current["conditions"], ambient_sounds)
+    update_wind(current["wind"], ambient_sounds)
+    update_cricket(current["temp"], ambient_sounds)
+    update_melody(current["humidity"], forecast["highs"], forecast["lows"],
+            forecast["pop"], sounds)
     update_mixdown(sounds, ambient_sounds)
     time.sleep(120)
