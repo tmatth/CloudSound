@@ -63,7 +63,7 @@ def WeatherScrape():
 
     current["conditions"] = weather_to_int(cur.group(1))
     print current["conditions"]
-    current["temp"] = float(cur.group(2))*5/9.0
+    current["temp"] = (float(cur.group(2))-32)*5/9.0
     print current["temp"]
     current["rain"] = int(cur.group(3))
     print current["rain"]
