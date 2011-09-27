@@ -23,7 +23,8 @@ from urllib2 import URLError
 from pyo import *
 
 SND_PATH = 'snds/'
-URL_TIMEOUT = 0
+URL_TIMEOUT = 100
+citycode = "CAXX0301"
 
 def weather_to_int(nn):
     nn_num = 1
@@ -35,33 +36,18 @@ def weather_to_int(nn):
     if re.search(r'thunder',nn,re.I): nn_num += 100
     return nn_num
 
-# scrape Montreal current weather from the weather office site
+# scrape current weather
 
-regex = re.compile("<b>Condition:<\/b> ([\w\s]+?)<br\/>\n"
-         "<b>Temperature:<\/b> ([\d\.]+).*?<br\/>\n"
-         "<b>Pressure \/ Tendency:<\/b> ([\d\.]*) kPa (\w*)<br\/>\n"
-         "<b>Visibility:<\/b> ([\d\.]*) km<br\/>\n"
-         "<b>Humidity:<\/b> (\d*) %<br\/>.*?"
-#        "<b>Humidex:<\/b> ([\d\.]*).*?<br\/>\n"
-         "<b>Dewpoint:<\/b> ([\d\.]*).*?<br\/>\n"
-         "<b>Wind:<\/b> (\w*).*?([\d\.]+) km\/h<br\/>", re.DOTALL)
+regex = re.compile("twc-col-2 twc-forecast-icon.*?alt=\"([\w\s]+)\".*?"
+"twc-col-1 twc-forecast-temperature\"><strong>([\d\.]+).*?"
+"Chance of Rain:.*?(\d+).*?"
+"Wind:<br><strong>.*?(Calm|[\w\s]+ at[\s\n]+(\d+)).*?"
+"Humidity:<\/span>\s*([\d]+).*?", re.DOTALL)
 
-# scrape Montreal forecasted weather from montreal-weather.ca
+# scrape 10 day forecast
 
 regex2 = re.compile(
-"POP.*?(\d+|-).*?"
-"<li class=\"prev petit\">[\s\n]*(\w[\w\s]*\w)\s*<\/li>.*?"
-"([\d\.-]+).*?([\d\.-]+).*?(\d+|-).*?"
-"<li class=\"prev petit\">[\s\n]*(\w[\w\s]*\w)\s*<\/li>.*?"
-"([\d\.-]+).*?([\d\.-]+).*?(\d+|-).*?"
-"<li class=\"prev petit\">[\s\n]*(\w[\w\s]*\w)\s*<\/li>.*?"
-"([\d\.-]+).*?([\d\.-]+).*?(\d+|-).*?"
-"<li class=\"prev petit\">[\s\n]*(\w[\w\s]*\w)\s*<\/li>.*?"
-"([\d\.-]+).*?([\d\.-]+).*?(\d+|-).*?"
-"<li class=\"prev petit\">[\s\n]*(\w[\w\s]*\w)\s*<\/li>.*?"
-"([\d\.-]+).*?([\d\.-]+).*?(\d+|-).*?"
-"<li class=\"prev petit\">[\s\n]*(\w[\w\s]*\w)\s*<\/li>.*?"
-"([\d\.-]+).*?([\d\.-]+).*?(\d+|-).*?", re.DOTALL)
+"twc-(wx-hi\d+|wx-low\d+|line-precip)\">.*?(--|\d+)",re.DOTALL)
 
 def WeatherScrape():
 
@@ -69,45 +55,39 @@ def WeatherScrape():
     forecast = {"conditions":[],"highs":[],"lows":[],"pop":[]}
 
     try:
-        url = urllib2.urlopen("http://text.www.weatheroffice.gc.ca/rss/city/qc-147_e.xml", timeout=URL_TIMEOUT).read()
+        url = urllib2.urlopen("http://www.weather.com/weather/today/"+citycode, timeout=URL_TIMEOUT).read()
     except URLError:
-        url = open('qc-147_e.xml').read()
-
-    #url = open('/stuff/weather/qc-147_e.xml').read()
+        url = open('CAXX0301').read()
 
     cur = regex.search(url)
-    for n in range(1,10):
-        print cur.group(n)
 
     current["conditions"] = weather_to_int(cur.group(1))
-    current["temp"] = float(cur.group(2))
-    current["humidity"] = int(cur.group(6))
-    current["wind"] = float(cur.group(9))
-
+    print current["conditions"]
+    current["temp"] = float(cur.group(2))*5/9.0
+    print current["temp"]
+    current["rain"] = int(cur.group(3))
+    print current["rain"]
+    if cur.group(4) == "Calm": current["wind"] = 0
+    else: current["wind"] = float(cur.group(5))*1.609344
+    print current["wind"]
+    current["humidity"] = float(cur.group(6))
+    print current["humidity"]
 
     try:
-        url2 = urllib2.urlopen("http://montreal-weather.ca/", timeout=URL_TIMEOUT).read()
+        url2 = urllib2.urlopen("http://www.weather.com/weather/tenday/"+citycode, timeout=URL_TIMEOUT).read()
     except URLError:
-        url2 = open('montreal-weather.html').read()
+        url2 = open('CAXX0301.1').read()
 
-    fore = regex2.search(url2)
-    current["rain"] = fore.group(1)
-    if current["rain"] == "-": current["rain"] = 0
-    else: current["rain"] = int(current["rain"])
+    fore = regex2.findall(url2)
 
-    for n in range(2,26,4):
-        forecast["conditions"].append(weather_to_int(fore.group(n)))
-    print forecast["conditions"]
-    for n in range(3,26,4):
-        forecast["highs"].append(int(fore.group(n))*14)
+    for n in range(1,10):
+        forecast["highs"].append((int(fore[n][1])-32)*5/9.0*14)
     print forecast["highs"]
-    for n in range(4,26,4):
-        forecast["lows"].append(int(fore.group(n))*7)
+    for n in range(11,20):
+        forecast["lows"].append((int(fore[n][1])-32)*5/9.0*7)
     print forecast["lows"]
-    for n in range(5,26,4):
-        nn = fore.group(n)
-        if nn == "-": forecast["pop"].append(0)
-        else: forecast["pop"].append(int(fore.group(n))/12.0)
+    for n in range(21,30):
+        forecast["pop"].append(int(fore[n][1])/12.0)
     print forecast["pop"]
     return current,forecast
 
