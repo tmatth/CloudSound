@@ -202,18 +202,19 @@ def update_mixdown(sounds, ambient_sounds):
     sounds.append(Freeverb(mix, size=0.9, damp=0.95).out())
 
 
-sounds = []
-ambient_sounds = []
+if __name__ == '__main__':
+    sounds = []
+    ambient_sounds = []
 
-while True:
-    current, forecast = WeatherScrape()
-    reset_sounds(sounds, ambient_sounds)
-    update_rain(current["rain"], current["temp"], current["conditions"], ambient_sounds)
-    update_snow(current["rain"], current["temp"], current["conditions"], ambient_sounds)
-    update_thunder(current["conditions"], ambient_sounds)
-    update_wind(current["wind"], ambient_sounds)
-    update_cricket(current["temp"], ambient_sounds)
-    update_melody(current["humidity"], forecast["highs"], forecast["lows"],
-            forecast["pop"], sounds)
-    update_mixdown(sounds, ambient_sounds)
-    time.sleep(120)
+    while True:
+        current, forecast = WeatherScrape()
+        reset_sounds(sounds, ambient_sounds)
+        update_rain(current["rain"], current["temp"], current["conditions"], ambient_sounds)
+        update_snow(current["rain"], current["temp"], current["conditions"], ambient_sounds)
+        update_thunder(current["conditions"], ambient_sounds)
+        update_wind(current["wind"], ambient_sounds)
+        update_cricket(current["temp"], ambient_sounds)
+        update_melody(current["humidity"], forecast["highs"], forecast["lows"],
+                forecast["pop"], sounds)
+        update_mixdown(sounds, ambient_sounds)
+        time.sleep(120)
