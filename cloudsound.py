@@ -42,7 +42,7 @@ regex = re.compile("twc-col-2 twc-forecast-icon.*?alt=\"([\w\s]+)\".*?"
 "twc-col-1 twc-forecast-temperature\"><strong>([\d\.]+).*?"
 "Chance of Rain:.*?(\d+).*?"
 "Wind:<br><strong>.*?(Calm|[\w\s]+ at[\s\n]+(\d+)).*?"
-"Humidity:<\/span>\s*([\d]+).*?", re.DOTALL)
+"Humidity:<\/span>\s*([\d]+|N\/A).*?", re.DOTALL)
 
 # scrape 10 day forecast
 
@@ -59,6 +59,7 @@ def WeatherScrape():
     except URLError:
         url = open('CAXX0301').read()
 
+    print "got data"
     cur = regex.search(url)
 
     current["conditions"] = weather_to_int(cur.group(1))
@@ -70,7 +71,8 @@ def WeatherScrape():
     if cur.group(4) == "Calm": current["wind"] = 0
     else: current["wind"] = float(cur.group(5))*1.609344
     print current["wind"]
-    current["humidity"] = float(cur.group(6))
+    if cur.group(6) == "N/A": current["humidity"] = 0
+    else: current["humidity"] = float(cur.group(6))
     print current["humidity"]
 
     try:
@@ -215,6 +217,6 @@ if __name__ == '__main__':
         update_wind(current["wind"], ambient_sounds)
         update_cricket(current["temp"], ambient_sounds)
         update_melody(current["humidity"], forecast["highs"], forecast["lows"],
-                forecast["pop"], sounds)
+                    forecast["pop"], sounds)
         update_mixdown(sounds, ambient_sounds)
         time.sleep(120)
