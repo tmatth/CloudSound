@@ -18,13 +18,45 @@
 # You should have received a copy of the GNU General Public License
 # along with CloudSound.  If not, see <http://www.gnu.org/licenses/>.
 
-import urllib2,re,datetime,calendar
+import urllib2,re,datetime,calendar,sys,getopt
 from urllib2 import URLError
 from pyo import *
 
 SND_PATH = 'snds/'
 URL_TIMEOUT = 100
-citycode = "CAXX0301"
+
+def main(argv=None):
+
+    citycode = "CAXX0301"
+    sounds = []
+    ambient_sounds = []
+
+    if argv == None:
+        argv = sys.argv
+    try:
+        opts, args = getopt.getopt(argv[1:], "hc:")
+    except getopt.error, msg:
+        print "Invalid options"
+
+    for o, a in opts:
+        if o in ("-h", "--help"):
+            print "-c <citycode>"
+            sys.exit(2)
+        if o == "-c": citycode = a
+
+    while True:
+        current, forecast = WeatherScrape(citycode)
+        reset_sounds(sounds, ambient_sounds)
+        update_rain(current["rain"], current["temp"], current["conditions"], ambient_sounds)
+        update_snow(current["rain"], current["temp"], current["conditions"], ambient_sounds)
+        update_thunder(current["conditions"], ambient_sounds)
+        update_wind(current["wind"], ambient_sounds)
+        update_cricket(current["temp"], ambient_sounds)
+        update_melody(current["humidity"], forecast["highs"], forecast["lows"],
+                    forecast["pop"], sounds)
+        update_mixdown(sounds, ambient_sounds)
+        time.sleep(120)
+
 
 def weather_to_int(nn):
     nn_num = 1
@@ -49,7 +81,7 @@ regex = re.compile("twc-col-2 twc-forecast-icon.*?alt=\"([\w\s]+)\".*?"
 regex2 = re.compile(
 "twc-(wx-hi\d+|wx-low\d+|line-precip)\">.*?(--|\d+)",re.DOTALL)
 
-def WeatherScrape():
+def WeatherScrape(citycode):
 
     current = {}
     forecast = {"conditions":[],"highs":[],"lows":[],"pop":[]}
@@ -203,20 +235,5 @@ def update_mixdown(sounds, ambient_sounds):
     mix = Mix(sounds,2,mul=1)
     sounds.append(Freeverb(mix, size=0.9, damp=0.95).out())
 
-
-if __name__ == '__main__':
-    sounds = []
-    ambient_sounds = []
-
-    while True:
-        current, forecast = WeatherScrape()
-        reset_sounds(sounds, ambient_sounds)
-        update_rain(current["rain"], current["temp"], current["conditions"], ambient_sounds)
-        update_snow(current["rain"], current["temp"], current["conditions"], ambient_sounds)
-        update_thunder(current["conditions"], ambient_sounds)
-        update_wind(current["wind"], ambient_sounds)
-        update_cricket(current["temp"], ambient_sounds)
-        update_melody(current["humidity"], forecast["highs"], forecast["lows"],
-                    forecast["pop"], sounds)
-        update_mixdown(sounds, ambient_sounds)
-        time.sleep(120)
+if __name__ == "__main__":
+    sys.exit(main())
