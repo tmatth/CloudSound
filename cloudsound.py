@@ -28,24 +28,29 @@ URL_TIMEOUT = 100
 def main(argv=None):
 
     citycode = "CAXX0301"
+    forecast_length = 6
     sounds = []
     ambient_sounds = []
 
     if argv == None:
         argv = sys.argv
     try:
-        opts, args = getopt.getopt(argv[1:], "hc:")
+        opts, args = getopt.getopt(argv[1:], "hc:n:",["help"])
     except getopt.error, msg:
         print "Invalid options"
 
     for o, a in opts:
         if o in ("-h", "--help"):
-            print "-c <citycode>"
+            print """
+            -c <citycode>
+            -n <length of forecast in days, from 1 to 9>
+            """
             sys.exit(2)
         if o == "-c": citycode = a
+        if o == "-n": forecast_length = int(a)
 
     while True:
-        current, forecast = WeatherScrape(citycode)
+        current, forecast = WeatherScrape(citycode,forecast_length)
         reset_sounds(sounds, ambient_sounds)
         update_rain(current["rain"], current["temp"], current["conditions"], ambient_sounds)
         update_snow(current["rain"], current["temp"], current["conditions"], ambient_sounds)
@@ -53,7 +58,7 @@ def main(argv=None):
         update_wind(current["wind"], ambient_sounds)
         update_cricket(current["temp"], ambient_sounds)
         update_melody(current["humidity"], forecast["highs"], forecast["lows"],
-                    forecast["pop"], sounds)
+                    forecast["pop"], forecast["length"], sounds)
         update_mixdown(sounds, ambient_sounds)
         time.sleep(120)
 
@@ -81,10 +86,10 @@ regex = re.compile("twc-col-2 twc-forecast-icon.*?alt=\"([\w\s]+)\".*?"
 regex2 = re.compile(
 "twc-(wx-hi\d+|wx-low\d+|line-precip)\">.*?(--|\d+)",re.DOTALL)
 
-def WeatherScrape(citycode):
+def WeatherScrape(citycode,forecast_length):
 
     current = {}
-    forecast = {"conditions":[],"highs":[],"lows":[],"pop":[]}
+    forecast = {"length":forecast_length,"conditions":[],"highs":[],"lows":[],"pop":[]}
 
     try:
         url = urllib2.urlopen("http://www.weather.com/weather/today/"+citycode, timeout=URL_TIMEOUT).read()
@@ -114,13 +119,14 @@ def WeatherScrape(citycode):
 
     fore = regex2.findall(url2)
 
-    for n in range(1,10):
+    for n in range(1,1+forecast_length):
         forecast["highs"].append((int(fore[n][1])-32)*5/9.0*14)
     print forecast["highs"]
-    for n in range(11,20):
-        forecast["lows"].append((int(fore[n][1])-32)*5/9.0*7)
+    for n in range(11,11+forecast_length):
+        if fore[n][1] == "--": forecast["lows"].append(0)
+        else: forecast["lows"].append((int(fore[n][1])-32)*5/9.0*7)
     print forecast["lows"]
-    for n in range(21,30):
+    for n in range(21,21+forecast_length):
         forecast["pop"].append(int(fore[n][1])/12.0)
     print forecast["pop"]
     return current,forecast
@@ -200,7 +206,8 @@ def update_cricket(temp, ambient_sounds):
         temperature_ratio,mul=1),outs=2,pan=0.8).out())
 
 
-def update_melody(humidity, forecast_highs, forecast_lows, forecast_pop, sounds):
+def update_melody(humidity, forecast_highs, forecast_lows, forecast_pop,
+        forecast_length, sounds):
     # humidity - controls speed of forecast melody
     humid = .5 + humidity/100.0*.5
 
@@ -210,12 +217,13 @@ def update_melody(humidity, forecast_highs, forecast_lows, forecast_pop, sounds)
     week_day = calendar.weekday(now.year,now.month,now.day)
     day_seq = [1,1,1,1,1,3,3]
     day_seq = day_seq[week_day:] + day_seq[:week_day]
+    day_seq = (day_seq*2)[:forecast_length+1]
     day_seq.pop(0)
     day_seq[-1] += 1
 
     env = CosTable([(0,0),(300,1),(1000,.3),(8191,0)])
     env2 = HarmTable([1,0,.33,0,.2,0,.143,0,.111])
-    seq = Seq(time=humid, seq=day_seq, poly=6).play()
+    seq = Seq(time=humid, seq=day_seq, poly=forecast_length).play()
     amp = TrigEnv(seq, table=env, dur=1, mul=.5)
     amp2 = TrigEnv(seq, table=env2, dur=1, mul=.5)
     sounds.append(Pan(SineLoop(freq=forecast_highs,
