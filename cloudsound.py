@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# Copyright (c) 2011 Charles Li <chuck@mixed-metaphors.net>
+# Copyright (c) 2011 Charles Li <chuck@mixed-metaphors.com>
 # Copyright (c) 2011 Tristan Matthews <le.businessman@gmail.com>
 
 # This file is part of CloudSound.
@@ -24,6 +24,7 @@ from pyo import *
 
 SND_PATH = 'snds/'
 URL_TIMEOUT = 100
+
 
 def main(argv=None):
 
@@ -49,19 +50,81 @@ def main(argv=None):
         if o == "-c": citycode = a
         if o == "-n": forecast_length = int(a)
 
-    while True:
-        current, forecast = WeatherScrape(citycode,forecast_length)
-        reset_sounds(sounds, ambient_sounds)
-        update_rain(current["rain"], current["temp"], current["conditions"], ambient_sounds)
-        update_snow(current["rain"], current["temp"], current["conditions"], ambient_sounds)
-        update_thunder(current["conditions"], ambient_sounds)
-        update_wind(current["wind"], ambient_sounds)
-        update_cricket(current["temp"], ambient_sounds)
-        update_melody(current["humidity"], forecast["highs"], forecast["lows"],
-                    forecast["pop"], forecast["length"], sounds)
-        update_mixdown(sounds, ambient_sounds)
-        time.sleep(120)
+# initiate sounds
 
+    current, forecast = WeatherScrape(citycode,forecast_length)
+    reset_sounds(sounds, ambient_sounds)
+    cricket_conv, cricket_ctrl = start_crickets(current["temp"],ambient_sounds) 
+    wind1_ctrl, wind2_ctrl = start_wind(current["wind"],ambient_sounds)
+#    current["rain"] = 50
+#    if current["rain"] and current["temp"] > 0 or current["conditions"] == 54:
+#        rain_ctrl = start_rain(current["rain"],ambient_sounds)
+    if current["rain"] and current["temp"] <= 0 or current["conditions"] == 54:
+        snow_ctrl = start_snow(current["rain"], ambient_sounds)
+    if current["conditions"] > 100:
+        thunder_ctrl = start_thunder(ambient_sounds)
+    day_seq = get_day_seq(forecast["length"])
+    humidity_ctrl, high_ctrl, low_ctrl, pop_ctrl, seq_ctrl = start_melody(current["humidity"], forecast["highs"], forecast["lows"],forecast["pop"], day_seq, sounds)
+
+# rain - not sure why it doesn't work encapsulated as start_rain()
+    rain = current["rain"]
+    drops = [SND_PATH + 'water_drops1.aif' for i in range(1,32)]
+    num_drops = len(drops)
+    olaps = 4
+    tabs = []
+    trtabs = []
+    trrnds = []
+    rain_sounds = []
+    rain_ctrl = Cloud(density=(rain/10)**2 + rain/5 - 2, poly=num_drops*olaps).play()
+    for i in range(num_drops):
+       tabs.append(SndTable(drops[i]))
+
+    for j in range(olaps):
+       offset = j * num_drops
+       for i in range(num_drops):
+           index = i + offset
+           trrnds.append(TrigChoice(rain_ctrl[index],[0.75,1,1.25,1.5,2]))
+           rain_sounds.append(TrigEnv(rain_ctrl[index],table=tabs[i],dur=1./tabs[i].getRate()*trrnds[index]))
+    rain_mix = Mix(rain_sounds,2,mul=1)
+    ambient_sounds.append(rain_mix)
+    update_mixdown(sounds, ambient_sounds)
+
+# update sound data every once in a while
+
+    while True:
+        time.sleep(1800)
+        current, forecast = WeatherScrape(citycode,forecast_length)
+        wind1_ctrl.min = current["wind"] * 15
+        wind1_ctrl.max = current["wind"] * 16
+        wind2_ctrl.min = current["wind"] * 18
+        wind2_ctrl.max = current["wind"] * 19
+        rain_ctrl.setDensity((current["rain"]/100)**2 + current["rain"]/5 - 2)
+        cricket_ctrl.freq = current["temp"] * cricket_conv
+        humidity_ctrl.time = current["humidity"]
+        high_ctrl.freq = forecast["highs"]
+        low_ctrl.freq = forecast["lows"]
+        pop_ctrl.mul = forecast["pop"]
+        seq_ctrl = get_day_seq(forecast["length"])
+        if current["rain"] and current["temp"] <= 0 or current["conditions"] == 54:
+            try: snow_ctrl
+            except NameError:
+                snow_ctrl = start_snow(current["rain"], ambient_sounds)
+        else:
+            try: snow_ctrl
+            except NameError: pass
+            else:
+                snow_ctrl.stop()
+                del snow_ctrl
+        if current["conditions"] > 100:
+            try: thunder_ctrl 
+            except NameError:
+                thunder_ctrl = start_thunder(ambient_sounds)
+        else:
+            try: thunder_ctrl
+            except NameError: pass
+            else:
+                thunder_ctrl.stop()
+                del thunder_ctrl
 
 def weather_to_int(nn):
     nn_num = 1
@@ -109,7 +172,7 @@ def WeatherScrape(citycode,forecast_length):
     else: current["wind"] = float(cur.group(5))*1.609344
     print current["wind"]
     if cur.group(6) == "N/A": current["humidity"] = 0
-    else: current["humidity"] = float(cur.group(6))
+    else: current["humidity"] = .5 + float(cur.group(6))/100.0*.5
     print current["humidity"]
 
     try:
@@ -150,42 +213,44 @@ def reset_sounds(sounds, ambient_sounds):
     ambient_sounds = []
 
 # raindrop
-def update_rain(rain, temp, cond, ambient_sounds):
-    if rain and temp > 0 or cond == 54:
+def start_rain(rain, ambient_sounds):
         drops = [SND_PATH + 'water_drops1.aif' for i in range(1,32)]
         num_drops = len(drops)
         olaps = 4
         tabs = []
         trtabs = []
         trrnds = []
+        rain_sounds = []
         cl = Cloud(density=(rain/10)**2 + rain/5 - 2, poly=num_drops*olaps).play()
         for i in range(num_drops):
-            tabs.append(SndTable(drops[i]))
+           tabs.append(SndTable(drops[i]))
 
         for j in range(olaps):
            offset = j * num_drops
            for i in range(num_drops):
                index = i + offset
                trrnds.append(TrigChoice(cl[index],[0.75,1,1.25,1.5,2]))
-               ambient_sounds.append(TrigEnv(cl[index],table=tabs[i],dur=1./tabs[i].getRate()*trrnds[index]))
+               rain_sounds.append(TrigEnv(cl[index],table=tabs[i],dur=1./tabs[i].getRate()*trrnds[index]))
+        rain_mix = Mix(rain_sounds,2,mul=1)
+        ambient_sounds.append(rain_mix)
+        return cl
 
 # snow
-def update_snow(rain, temp, cond, ambient_sounds):
-    if rain and temp <= 0 or cond == 54:
-        snow = SndTable(SND_PATH + 'walking-in-snow-1.aif')
-        env = Osc(snow, freq=1.0/snow.getDur()).out()
-        ambient_sounds.append(env)
+def start_snow(rain, ambient_sounds):
+    snow = SndTable(SND_PATH + 'walking-in-snow-1.aif')
+    env = Osc(snow, freq=1.0/snow.getDur())
+    ambient_sounds.append(env)
+    return env
 
 # thunder
-def update_thunder(cond, ambient_sounds):
-    if cond > 100:
-        thunder = SndTable(SND_PATH + 'thunder.aif')
-        ambient_sounds.append(Osc(table=thunder, freq=thunder.getRate(), mul=.5).out())
+def start_thunder(ambient_sounds):
+    thunder = SndTable(SND_PATH + 'thunder.aif')
+    thunder_ctrl = Osc(table=thunder, freq=thunder.getRate(), mul=.5)
+    ambient_sounds.append(thunder_ctrl)
+    return thunder_ctrl
 
 # the wind
-
-def update_wind(wind, ambient_sounds):
-    if wind:
+def start_wind(wind, ambient_sounds):
         metro = Metro(time=.250).play()
         wind1_ctrl = TrigRand(metro, min=wind*15, max=wind*16, port=2)
         wind2_ctrl = TrigRand(metro, min=wind*18, max=wind*19, port=2)
@@ -193,26 +258,24 @@ def update_wind(wind, ambient_sounds):
         wind2 = Noise(mul=0.5)
         ambient_sounds.append(Biquad(wind1, freq=wind1_ctrl, q=5, type=0))
         ambient_sounds.append(Biquad(wind2, freq=wind2_ctrl, q=5, type=0))
+        return wind1_ctrl,wind2_ctrl
 
 # crickets - current temperature via Dolbear's Law
-def update_cricket(temp, ambient_sounds):
+def start_crickets(temp, ambient_sounds):
     if temp < 0: temp = 0.7 + 1.0/temp*-1
     cricket = SndTable(SND_PATH + 'cricket.aif')
     temperature = temp # change this to change temperature
     temperature_in_file = 25.0
-    chirps_in_file = 20
+#    chirps_in_file = 20
     temperature_ratio = temperature / temperature_in_file
-    ambient_sounds.append(Pan(Osc(table=cricket, freq=cricket.getRate() *
-        temperature_ratio,mul=1),outs=2,pan=0.8).out())
+    conv = cricket.getRate()/temperature_in_file
+    cricket_ctrl = Osc(table=cricket, freq=conv * temperature, mul=1)
+    ambient_sounds.append(Pan(cricket_ctrl,outs=2,pan=0.8))
+    return conv, cricket_ctrl
 
 
-def update_melody(humidity, forecast_highs, forecast_lows, forecast_pop,
-        forecast_length, sounds):
-    # humidity - controls speed of forecast melody
-    humid = .5 + humidity/100.0*.5
 
-    # temperature forecast - highs and lows
-
+def get_day_seq(forecast_length):
     now = datetime.datetime.now()
     week_day = calendar.weekday(now.year,now.month,now.day)
     day_seq = [1,1,1,1,1,3,3]
@@ -220,28 +283,36 @@ def update_melody(humidity, forecast_highs, forecast_lows, forecast_pop,
     day_seq = (day_seq*2)[:forecast_length+1]
     day_seq.pop(0)
     day_seq[-1] += 1
+    return day_seq
 
+def start_melody(humidity, forecast_highs, forecast_lows, forecast_pop,
+        day_seq, sounds):
+    # humidity - controls speed of forecast melody
+    humid = humidity
+    # temperature forecast - highs and lows
     env = CosTable([(0,0),(300,1),(1000,.3),(8191,0)])
     env2 = HarmTable([1,0,.33,0,.2,0,.143,0,.111])
-    seq = Seq(time=humid, seq=day_seq, poly=forecast_length).play()
+    seq = Seq(time=humid, seq=day_seq, poly=len(day_seq)).play()
     amp = TrigEnv(seq, table=env, dur=1, mul=.5)
     amp2 = TrigEnv(seq, table=env2, dur=1, mul=.5)
-    sounds.append(Pan(SineLoop(freq=forecast_highs,
-        feedback=0.05,mul=amp),outs=2,pan=0.2).out())
-    sounds.append(Pan(SineLoop(freq=forecast_lows,
-        feedback=0.05,mul=amp2),outs=2,pan=0.9).out())
+    melody_high = SineLoop(freq=forecast_highs,feedback=0.05,mul=amp)
+    melody_low = SineLoop(freq=forecast_lows,feedback=0.05,mul=amp2)
+    sounds.append(Pan(melody_high,outs=2,pan=0.2))
+    sounds.append(Pan(melody_low,outs=2,pan=0.9))
 
     # rain forecast
     ramp = TrigEnv(seq, table=env, dur=1, mul=forecast_pop)
     rt = SndTable(SND_PATH + 'water_drops1.aif')
-    sounds.append(Freeverb(Pan(Osc(table=rt, freq=100, mul=ramp),outs=2,pan=0.5)).out())
+    sounds.append(Freeverb(Pan(Osc(table=rt, freq=100, mul=ramp),outs=2,pan=0.5)))
+    return seq, melody_high, melody_low, ramp, seq
 
 def update_mixdown(sounds, ambient_sounds):
     # mixdown!
     sounds += ambient_sounds
     #mix = Biquad(Mix(sounds, 2, mul=1), freq=1/humidity*17400+600)
-    mix = Mix(sounds,2,mul=1)
+    mix = Mix(sounds,2,mul=1).out()
     sounds.append(Freeverb(mix, size=0.9, damp=0.95).out())
+    
 
 if __name__ == "__main__":
     sys.exit(main())
