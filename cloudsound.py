@@ -56,9 +56,14 @@ def main(argv=None):
     reset_sounds(sounds, ambient_sounds)
     cricket_conv, cricket_ctrl = start_crickets(current["temp"],ambient_sounds) 
     wind1_ctrl, wind2_ctrl = start_wind(current["wind"],ambient_sounds)
-#    current["rain"] = 50
-#    if current["rain"] and current["temp"] > 0 or current["conditions"] == 54:
-#        rain_ctrl = start_rain(current["rain"],ambient_sounds)
+    if current["rain"] and current["temp"] > 0 \
+            or current["conditions"] == 54:
+        rain = (current["rain"]/100.0)**2 + current["rain"]/5.0 - 2
+        rain_ctrl = Cloud(density=rain, poly=100).play()
+        rain_drop = SndTable(SND_PATH+'water_drops1.aif')
+        rain_choice = TrigChoice(rain_ctrl,[0.75,1,1.25,1.5,1.75,2])
+        rain_mix = TrigEnv(rain_ctrl,table=rain_drop,dur=1./rain_drop.getRate()*rain_choice)
+        ambient_sounds.append(rain_mix)
     if current["rain"] and current["temp"] <= 0 or current["conditions"] == 54:
         snow_ctrl = start_snow(current["rain"], ambient_sounds)
     if current["conditions"] > 100:
@@ -66,27 +71,6 @@ def main(argv=None):
     day_seq = get_day_seq(forecast["length"])
     humidity_ctrl, high_ctrl, low_ctrl, pop_ctrl, seq_ctrl = start_melody(current["humidity"], forecast["highs"], forecast["lows"],forecast["pop"], day_seq, sounds)
 
-# rain - not sure why it doesn't work encapsulated as start_rain()
-    rain = current["rain"]
-    drops = [SND_PATH + 'water_drops1.aif' for i in range(1,32)]
-    num_drops = len(drops)
-    olaps = 4
-    tabs = []
-    trtabs = []
-    trrnds = []
-    rain_sounds = []
-    rain_ctrl = Cloud(density=(rain/10)**2 + rain/5 - 2, poly=num_drops*olaps).play()
-    for i in range(num_drops):
-       tabs.append(SndTable(drops[i]))
-
-    for j in range(olaps):
-       offset = j * num_drops
-       for i in range(num_drops):
-           index = i + offset
-           trrnds.append(TrigChoice(rain_ctrl[index],[0.75,1,1.25,1.5,2]))
-           rain_sounds.append(TrigEnv(rain_ctrl[index],table=tabs[i],dur=1./tabs[i].getRate()*trrnds[index]))
-    rain_mix = Mix(rain_sounds,2,mul=1)
-    ambient_sounds.append(rain_mix)
     update_mixdown(sounds, ambient_sounds)
 
 # update sound data every once in a while
@@ -98,7 +82,7 @@ def main(argv=None):
         wind1_ctrl.max = current["wind"] * 16
         wind2_ctrl.min = current["wind"] * 18
         wind2_ctrl.max = current["wind"] * 19
-        rain_ctrl.setDensity((current["rain"]/100)**2 + current["rain"]/5 - 2)
+        rain_ctrl.setDensity((current["rain"]/100.0)**2 + current["rain"]/5.0 - 2)
         cricket_ctrl.freq = current["temp"] * cricket_conv
         humidity_ctrl.time = current["humidity"]
         high_ctrl.freq = forecast["highs"]
@@ -212,28 +196,14 @@ def reset_sounds(sounds, ambient_sounds):
     sounds = []
     ambient_sounds = []
 
-# raindrop
+# raindrop - doesn't work for some reason
 def start_rain(rain, ambient_sounds):
-        drops = [SND_PATH + 'water_drops1.aif' for i in range(1,32)]
-        num_drops = len(drops)
-        olaps = 4
-        tabs = []
-        trtabs = []
-        trrnds = []
-        rain_sounds = []
-        cl = Cloud(density=(rain/10)**2 + rain/5 - 2, poly=num_drops*olaps).play()
-        for i in range(num_drops):
-           tabs.append(SndTable(drops[i]))
-
-        for j in range(olaps):
-           offset = j * num_drops
-           for i in range(num_drops):
-               index = i + offset
-               trrnds.append(TrigChoice(cl[index],[0.75,1,1.25,1.5,2]))
-               rain_sounds.append(TrigEnv(cl[index],table=tabs[i],dur=1./tabs[i].getRate()*trrnds[index]))
-        rain_mix = Mix(rain_sounds,2,mul=1)
-        ambient_sounds.append(rain_mix)
-        return cl
+    rain_ctrl = Cloud(density=rain, poly=100).play()
+    rain_drop = SndTable(SND_PATH+'water_drops1.aif')
+    rain_choice = TrigChoice(rain_ctrl,[0.75,1,1.25,1.5,2])
+    rain_mix = TrigEnv(rain_ctrl,table=rain_drop,dur=1./rain_drop.getRate()*rain_choice)
+    ambient_sounds.append(rain_mix)
+    return rain_ctrl
 
 # snow
 def start_snow(rain, ambient_sounds):
