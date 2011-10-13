@@ -30,44 +30,59 @@ def main(argv=None):
 
     citycode = "CAXX0301"
     forecast_length = 6
+    update_interval = 1800
     sounds = []
     ambient_sounds = []
 
     if argv == None:
         argv = sys.argv
     try:
-        opts, args = getopt.getopt(argv[1:], "hc:n:",["help"])
+        opts, args = getopt.getopt(argv[1:], "hc:n:u:",["help"])
     except getopt.error, msg:
         print "Invalid options"
 
     for o, a in opts:
         if o in ("-h", "--help"):
             print """
-            -c <citycode>
-            -n <length of forecast in days, from 1 to 9>
+            -c <weather.com citycode, default CAXX0301 (Montreal)>
+            -n <length of forecast in days, from 1 to 9, default 6>
+            -u <data update interval in seconds, default 1800>
             """
             sys.exit(2)
         if o == "-c": citycode = a
         if o == "-n": forecast_length = int(a)
+        if o == "-u": update_interval = int(a)
+
+# start pyo server
+
+    s = Server(nchnls=2, buffersize=512, duplex=0).boot()
+    s.start()
 
 # initiate sounds
 
     current, forecast = WeatherScrape(citycode,forecast_length)
     reset_sounds(sounds, ambient_sounds)
+
     cricket_conv, cricket_ctrl = start_crickets(current["temp"],ambient_sounds) 
+    
     wind1_ctrl, wind2_ctrl = start_wind(current["wind"],ambient_sounds)
+
+    # rain doesn't seem to work encapsulated in a function
+    rain_ctrl = Cloud(density=current["rain"], poly=100)
+    rain_drop = SndTable(SND_PATH+'water_drops1.aif')
+    rain_choice = TrigChoice(rain_ctrl,[0.75,1,1.25,1.5,1.75,2])
+    rain_mix = TrigEnv(rain_ctrl,table=rain_drop,dur=1./rain_drop.getRate()*rain_choice)
+    ambient_sounds.append(rain_mix)    
     if current["rain"] and current["temp"] > 0 \
             or current["conditions"] == 54:
-        rain = (current["rain"]/100.0)**2 + current["rain"]/5.0 - 2
-        rain_ctrl = Cloud(density=rain, poly=100).play()
-        rain_drop = SndTable(SND_PATH+'water_drops1.aif')
-        rain_choice = TrigChoice(rain_ctrl,[0.75,1,1.25,1.5,1.75,2])
-        rain_mix = TrigEnv(rain_ctrl,table=rain_drop,dur=1./rain_drop.getRate()*rain_choice)
-        ambient_sounds.append(rain_mix)
+        rain_ctrl.play()
+
     if current["rain"] and current["temp"] <= 0 or current["conditions"] == 54:
         snow_ctrl = start_snow(current["rain"], ambient_sounds)
+        
     if current["conditions"] > 100:
         thunder_ctrl = start_thunder(ambient_sounds)
+
     day_seq = get_day_seq(forecast["length"])
     humidity_ctrl, high_ctrl, low_ctrl, pop_ctrl, seq_ctrl = start_melody(current["humidity"], forecast["highs"], forecast["lows"],forecast["pop"], day_seq, sounds)
 
@@ -76,39 +91,43 @@ def main(argv=None):
 # update sound data every once in a while
 
     while True:
-        time.sleep(1800)
+        time.sleep(update_interval)
         current, forecast = WeatherScrape(citycode,forecast_length)
         wind1_ctrl.min = current["wind"] * 15
         wind1_ctrl.max = current["wind"] * 16
         wind2_ctrl.min = current["wind"] * 18
         wind2_ctrl.max = current["wind"] * 19
-        rain_ctrl.setDensity((current["rain"]/100.0)**2 + current["rain"]/5.0 - 2)
         cricket_ctrl.freq = current["temp"] * cricket_conv
         humidity_ctrl.time = current["humidity"]
         high_ctrl.freq = forecast["highs"]
         low_ctrl.freq = forecast["lows"]
         pop_ctrl.mul = forecast["pop"]
         seq_ctrl = get_day_seq(forecast["length"])
+        if current["rain"] and current["temp"] > 0 or current["conditions"] == 54:
+            rain_ctrl.setDensity(current["rain"])
+            rain_ctrl.play()
+        else:
+            rain_ctrl.stop()
         if current["rain"] and current["temp"] <= 0 or current["conditions"] == 54:
             try: snow_ctrl
             except NameError:
                 snow_ctrl = start_snow(current["rain"], ambient_sounds)
+            else: snow_ctrl.play()
         else:
             try: snow_ctrl
             except NameError: pass
-            else:
-                snow_ctrl.stop()
-                del snow_ctrl
+            else: snow_ctrl.stop()
         if current["conditions"] > 100:
             try: thunder_ctrl 
             except NameError:
                 thunder_ctrl = start_thunder(ambient_sounds)
+            else: thunder_ctrl.play()
         else:
             try: thunder_ctrl
             except NameError: pass
-            else:
-                thunder_ctrl.stop()
-                del thunder_ctrl
+            else: thunder_ctrl.stop()
+
+# ----------- Start of weather scraping functions ---------------
 
 def weather_to_int(nn):
     nn_num = 1
@@ -143,21 +162,21 @@ def WeatherScrape(citycode,forecast_length):
     except URLError:
         url = open('CAXX0301').read()
 
-    print "got data"
     cur = regex.search(url)
 
     current["conditions"] = weather_to_int(cur.group(1))
-    print current["conditions"]
+    print "Conditions: {}".format(current["conditions"])
     current["temp"] = (float(cur.group(2))-32)*5/9.0
-    print current["temp"]
-    current["rain"] = int(cur.group(3))
-    print current["rain"]
+    print "Temperature: {}".format(current["temp"])
+    rain = int(cur.group(3))
+    current["rain"] = (rain/100.0)**2 + rain/5.0 - 2
+    print "Rain: {}".format(current["rain"])
     if cur.group(4) == "Calm": current["wind"] = 0
     else: current["wind"] = float(cur.group(5))*1.609344
-    print current["wind"]
+    print "Wind: {}".format(current["wind"])
     if cur.group(6) == "N/A": current["humidity"] = 0
     else: current["humidity"] = .5 + float(cur.group(6))/100.0*.5
-    print current["humidity"]
+    print "Humidity: {}".format(current["humidity"])
 
     try:
         url2 = urllib2.urlopen("http://www.weather.com/weather/tenday/"+citycode, timeout=URL_TIMEOUT).read()
@@ -168,22 +187,17 @@ def WeatherScrape(citycode,forecast_length):
 
     for n in range(1,1+forecast_length):
         forecast["highs"].append((int(fore[n][1])-32)*5/9.0*14)
-    print forecast["highs"]
+    print "Highs: {}".format(forecast["highs"])
     for n in range(11,11+forecast_length):
         if fore[n][1] == "--": forecast["lows"].append(0)
         else: forecast["lows"].append((int(fore[n][1])-32)*5/9.0*7)
-    print forecast["lows"]
+    print "Lows: {}".format(forecast["lows"])
     for n in range(21,21+forecast_length):
         forecast["pop"].append(int(fore[n][1])/12.0)
-    print forecast["pop"]
+    print "POP: {}".format(forecast["pop"])
     return current,forecast
 
-# --------------- Sound Stuff -----------------------------------
-
-# start pyo server
-
-s = Server(nchnls=2, buffersize=512, duplex=0).boot()
-s.start()
+# --------------- Start of sound functions -------------------------
 
 def reset_sounds(sounds, ambient_sounds):
     for s in sounds:
