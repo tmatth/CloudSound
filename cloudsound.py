@@ -141,7 +141,7 @@ def weather_to_int(nn):
 
 # scrape current weather
 
-regex = re.compile("twc-col-2 twc-forecast-icon.*?alt=\"([\w\s\-]+)\".*?"
+regex = re.compile("twc-col-2 twc-forecast-icon.*?alt=\"([\w\s\-\/]+)\".*?"
 "twc-col-1 twc-forecast-temperature\"><strong>([\d\.]+).*?"
 "Chance of Rain:.*?(\d+).*?"
 "Wind:<br><strong>.*?(Calm|[\w\s]+ at[\s\n]+(\d+)).*?"
