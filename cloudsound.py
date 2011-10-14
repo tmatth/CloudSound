@@ -136,12 +136,12 @@ def weather_to_int(nn):
     if re.search(r'showers',nn,re.I): nn_num += 2
     if re.search(r'rain',nn,re.I): nn_num += 3
     if re.search(r'snow|flurries|ice|hail',nn,re.I): nn_num += 50
-    if re.search(r'thunder',nn,re.I): nn_num += 100
+    if re.search(r'thunder|t-showers',nn,re.I): nn_num += 100
     return nn_num
 
 # scrape current weather
 
-regex = re.compile("twc-col-2 twc-forecast-icon.*?alt=\"([\w\s]+)\".*?"
+regex = re.compile("twc-col-2 twc-forecast-icon.*?alt=\"([\w\s\-]+)\".*?"
 "twc-col-1 twc-forecast-temperature\"><strong>([\d\.]+).*?"
 "Chance of Rain:.*?(\d+).*?"
 "Wind:<br><strong>.*?(Calm|[\w\s]+ at[\s\n]+(\d+)).*?"
@@ -235,14 +235,14 @@ def start_thunder(ambient_sounds):
 
 # the wind
 def start_wind(wind, ambient_sounds):
-        metro = Metro(time=.250).play()
-        wind1_ctrl = TrigRand(metro, min=wind*15, max=wind*16, port=2)
-        wind2_ctrl = TrigRand(metro, min=wind*18, max=wind*19, port=2)
-        wind1 = Noise(mul=0.5)
-        wind2 = Noise(mul=0.5)
-        ambient_sounds.append(Biquad(wind1, freq=wind1_ctrl, q=5, type=0))
-        ambient_sounds.append(Biquad(wind2, freq=wind2_ctrl, q=5, type=0))
-        return wind1_ctrl,wind2_ctrl
+    metro = Metro(time=.250).play()
+    wind1_ctrl = TrigRand(metro, min=wind*15, max=wind*16, port=2)
+    wind2_ctrl = TrigRand(metro, min=wind*18, max=wind*19, port=2)
+    wind1 = Noise(mul=0.5)
+    wind2 = Noise(mul=0.5)
+    ambient_sounds.append(Biquad(wind1, freq=wind1_ctrl, q=5, type=0))
+    ambient_sounds.append(Biquad(wind2, freq=wind2_ctrl, q=5, type=0))
+    return wind1_ctrl,wind2_ctrl
 
 # crickets - current temperature via Dolbear's Law
 def start_crickets(temp, ambient_sounds):
