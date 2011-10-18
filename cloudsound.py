@@ -174,7 +174,7 @@ def WeatherScrape(citycode,forecast_length):
     if cur.group(4) == "Calm": current["wind"] = 0
     else: current["wind"] = float(cur.group(5))*1.609344
     print "Wind: {}".format(current["wind"])
-    if cur.group(6) == "N/A": current["humidity"] = 0
+    if cur.group(6) == "N/A": current["humidity"] = .5
     else: current["humidity"] = .5 + float(cur.group(6))/100.0*.5
     print "Humidity: {}".format(current["humidity"])
 
