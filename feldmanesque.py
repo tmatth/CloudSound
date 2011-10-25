@@ -137,8 +137,10 @@ class TempMelody(object):
         self._time = time
         self._dur = dur
         self._mul = mul
-        self._env = CosTable([(0,0),(140,1),(1370,0.45),(3600,0,23),(8191,0)])
-        self._env2 = ChebyTable([0.8,0.5,0.9,0.2,0.3,0.2,0,0.1])
+        self._env = CosTable([(0,0),(140,1),(1370,0.45),(3600,0.23),(8191,0)])
+#        self._env2 = ChebyTable([0.8,0.5,0.9,0.2,0.3,0.2,0.1,0.1,0.1,0.1,0.1,0.1])
+        self._env2 = ExpTable([(0,0),(4096,1),(8192,0)], exp=5, inverse=True)
+#        self._env2 = HannTable()
         self._seq = Seq(time=self._time,seq=self._clouds,poly=len(clouds)).play()
         self._amp = TrigEnv(self._seq,table=self._env,dur=self._dur,mul=self._mul)
         self._amp2 = TrigEnv(self._seq,table=self._env2,dur=self._dur,mul=self._mul)
@@ -178,8 +180,9 @@ class WindMelody(object):
         self._time = time
         self._dur = dur
         self._mul = mul
-        self._env = ChebyTable([0.8,0.5,0.9,0.9])
-        self._seq = Seq(time=self._time,seq=self._pop,poly=len(pop)).play()
+        self._env = ParaTable()
+        self._env_old = ChebyTable([0.8,0.5,0.9,0.9])
+        self._seq = Seq(time=self._time,seq=self._pop,poly=len(self._pop)).play()
         self._amp = TrigEnv(self._seq,table=self._env,dur=self._dur,mul=self._mul)
         self._exc = SineLoop(freq=self._wdir,feedback=0.05,mul=self._amp)
 
